@@ -1,0 +1,336 @@
+---
+title: "Week 3 Assessment"
+author: "Tabinda Ahmad"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exercise 1 - Reproducing and Arranging ggplot2 Figures
+
+```{r}
+nhanes <- read.csv("cleaned_NHANES.csv")
+library(ggplot2)
+library(cowplot)
+library(ggpubr)
+```
+```{r}
+age_plot <- ggplot(data = nhanes, aes(x = age, fill = gender)) +
+geom_histogram(binwidth = 5, position = "dodge") +
+  labs(x = "Age",
+       y = "Count",
+       fill = "Gender")
+age_plot
+
+
+```
+```{r}
+ethnicity_plot <- ggplot(data = nhanes, aes(x = ethnicity_2, fill = gender)) +
+geom_bar(position = "fill") +
+theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+labs(x = "Ethnicity",
+     y = "Proportion",
+     fill = "Gender") 
+
+```
+
+```{r}
+plot_grid(age_plot, ethnicity_plot)
+```
+```{r}
+ggarrange(age_plot, ethnicity_plot)
+```
+### Comparison of plot_grid() and ggarrange()
+
+Both plot_grid() and ggarrange() produced very similar results when the two figures were placed side by side. I did not notice a major difference between the two layouts using the default settings. Both functions displayed the figures clearly, although the long ethnicity labels made the second figure a little crowded. For these figures, I do not think one layout looks noticeably better than the other.
+
+# Exercise 2 - Visualizing Key Characteristics
+
+
+```{r}
+age_ex2 <- ggplot(data = nhanes, aes(x = age)) +
+geom_histogram() +
+  labs(title = "Distribution of Age",
+       x = "Age",
+       y = "Count")
+
+age_ex2
+
+sum(is.na(nhanes$age))
+
+ggsave("age_plot_ex2.png", plot = age_ex2)
+
+```
+The age of participants ranged from 0 to 80 years, with a median age of 28 years and a mean age of 32.52 years. There were 0 missing values for age
+
+```{r}
+gender_ex2 <- ggplot(data = nhanes, aes(x = gender)) +
+  geom_bar() +
+  labs(title = "Distribution of Gender",
+       x = "Gender",
+       y = "Count")
+
+gender_ex2
+
+sum(is.na(nhanes$gender))
+
+ggsave("gender_plot_ex2.png", plot = gender_ex2)
+
+```
+
+The gender distribution was fairly even, with 14,948 females and 14,452 males. There were 0 missing values for gender
+
+
+```{r}
+ethnicity1_ex2 <- ggplot(data = nhanes, aes(x = ethnicity_1)) +
+  geom_bar() +
+  labs(title = "Distribution of Ethnicity 1",
+       x = "Ethnicity",
+       y = "Count")
+ethnicity1_ex2
+
+sum(is.na(nhanes$ethnicity_1))
+ggsave("ethnicity1_plot_ex2.png", plot = ethnicity1_ex2)
+
+```
+
+White was the largest group in ethnicity 1, followed by Black, while Other Hispanic was the smallest group. There were 0 missing values for ethnicity 1
+
+
+
+```{r}
+ethnicity2_ex2 <- ggplot(data = nhanes, aes(x = ethnicity_2)) +
+  geom_bar() +
+  labs(title = "Distribution of Ethnicity 2",
+       x = "Ethnicity",
+       y = "Count")
+
+ethnicity2_ex2
+
+sum(is.na(nhanes$ethnicity_2))
+
+ggsave("ethnicity2_plot_ex2.png", plot = ethnicity2_ex2)
+
+
+
+```
+
+White was the largest group in ethnicity 2, followed by Black, while Other was the smallest group. There were 0 missing values for ethnicity 2
+
+
+### Comparison of Ethnicity Variables
+
+Ethnicity 2 provides more detailed information because it includes Asian as a separate category, while ethnicity 1 includes these participants in the broader Other category. Therefore, I chose to keep ethnicity 2 and remove ethnicity 1
+
+```{r}
+nhanes$ethnicity_1 <- NULL
+
+
+```
+
+
+# Exercise 3 - Improving a ggplot Figure
+
+```{r}
+diet <- read.csv("diet.csv")
+names(diet)
+head(diet)
+range(diet$Week)
+length(unique(diet$Participant))
+
+```
+
+### Comments on the Original Figure
+
+The original figure shows the weight of all participants over time using many individual lines. With 20 participants, the lines overlap and make the figure difficult to read. It is also hard to follow one participant from week 0 to week 16 and clearly see how their weight changed
+
+
+### Proposed Improvements
+
+I would improve the figure by showing each participant’s change in weight compared with their baseline weight at week 0. This would make it easier to see whether each participant gained or lost weight during the study. I would also use a clearer layout to reduce the overlap between participants and make individual weight changes easier to compare
+
+
+### Improved Figure
+
+```{r}
+baseline <- diet[diet$Week == 0, c("Participant", "Weight")]
+names(baseline)[2] <- "Baseline_Weight"
+diet_change <- merge(diet, baseline, by = "Participant")
+diet_change$Weight_Change <- diet_change$Weight - diet_change$Baseline_Weight
+head(diet_change)
+improved_diet_plot <- ggplot(data = diet_change,
+                            aes(x = Week, y = Weight_Change,
+                                group = Participant)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Change in Weight from Baseline Over Time",
+         x = "Week",
+         y = "Change in Weight from Baseline") +
+ theme_minimal()
+
+improved_diet_plot
+
+ggsave("improved_diet_plot.png", plot = improved_diet_plot)
+
+```
+
+
+
+# Exercise 4 - Exploring Relationships Through Visualizations
+
+```{r}
+nhanes$average_sbp <- rowMeans(
+  nhanes[, c("systolic_bp_1", "systolic_bp_2",
+             "systolic_bp_3", "systolic_bp_4")],
+  na.rm = TRUE
+)
+nhanes$average_sbp[is.nan(nhanes$average_sbp)] <- NA
+sum(is.na(nhanes$average_sbp))
+
+library(dplyr)
+nhanes_final <- nhanes %>%
+  filter(!is.na(age),
+         !is.na(gender),
+         !is.na(average_sbp))
+
+nhanes_final$hypertension <- case_when(
+  nhanes_final$average_sbp < 120 ~ "Normal",
+  nhanes_final$average_sbp < 130 ~ "Elevated",
+  nhanes_final$average_sbp < 140 ~ "Stage 1 hypertension",
+  nhanes_final$average_sbp >= 140 ~ "Stage 2 hypertension"
+)
+table(nhanes_final$hypertension)
+
+nhanes_final$hypertension <- factor(
+  nhanes_final$hypertension,
+  levels = c("Normal",
+             "Elevated",
+             "Stage 1 hypertension",
+             "Stage 2 hypertension")
+)
+table(nhanes_final$hypertension)
+table(nhanes_final$gender)
+
+
+```
+
+### Final Study Sample
+
+The original dataset included 29,400 participants. After removing participants with missing age, gender, or average systolic blood pressure, 21,604 participants remained in the final sample. The final sample included 11,061 females and 10,543 males. Most participants had normal systolic blood pressure (12,289), followed by elevated blood pressure (3,845), stage 2 hypertension (2,983), and stage 1 hypertension (2,487)
+
+
+### Hypertension Categories
+
+```{r}
+hypertension_plot <- ggplot(data = nhanes_final,
+                            aes(x = hypertension, fill = hypertension)) +
+ 
+  geom_bar() +
+    labs(title = "Distribution of Hypertension Categories",
+       x = "Hypertension Category",
+       y = "Count",
+       fill = "Hypertension Category") +
+  
+    theme_minimal()
+
+
+hypertension_plot
+
+
+
+
+
+
+
+```
+
+Most participants in the final sample had normal systolic blood pressure (12,289). Elevated blood pressure was observed in 3,845 participants, while 2,487 participants had stage 1 hypertension and 2,983 had stage 2 hypertension
+
+
+### Gender Distribution Before and After Filtering
+
+```{r}
+knitr::include_graphics("gender_plot_ex2.png")
+
+
+
+
+```
+
+
+```{r}
+
+gender_final_plot <- ggplot(data = nhanes_final,
+                            aes(x = gender)) +
+  geom_bar() +
+  labs(title = "Gender Distribution in Final Sample",
+       x = "Gender",
+       y = "Count") +
+  
+    theme_minimal()
+
+gender_final_plot
+
+
+
+
+```
+
+After removing participants with missing age, gender, or average systolic blood pressure, the number of participants decreased from 29,400 to 21,604. However, the gender distribution remained fairly even. The original sample included 14,948 females and 14,452 males, while the final sample included 11,061 females and 10,543 males
+
+
+### Hypertension Across Age and Gender
+
+```{r}
+table(nhanes_final$age_cat)
+
+levels(nhanes_final$age_cat)
+
+nhanes_final$age_cat <- factor(
+  nhanes_final$age_cat,
+  levels = c("0-17", "18-24", "25-39", "40-59", "60+")
+)
+
+levels(nhanes_final$age_cat)
+
+```
+
+```{r}
+final_plot <- ggplot(data = nhanes_final,
+                     aes(x = gender, fill = hypertension)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~ age_cat) +
+  scale_fill_manual(values = c("Normal" = "lightgreen",
+                               "Elevated" = "gold",
+                               "Stage 1 hypertension" = "orange",
+                               "Stage 2 hypertension" = "red")) +
+  
+    labs(title = "Hypertension Categories Across Age and Gender",
+       x = "Gender",
+       y = "Proportion",
+       fill = "Hypertension Category") +
+  
+  theme_minimal()
+final_plot
+
+ggsave("hypertension_age_gender.png", plot = final_plot)
+
+
+
+
+
+
+
+
+```
+
+The distribution of hypertension categories changed across age groups. Younger participants were mostly in the normal blood pressure category, while the proportion of participants with stage 1 and stage 2 hypertension increased in the older age groups. Differences between females and males were also visible within the age groups
+
+
+
+
