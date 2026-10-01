@@ -2,22 +2,33 @@
 title: "Week 3 Assessment"
 author: "Tabinda Ahmad"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  html_document:
+  theme: cosmo
+  highlight: tango
+  toc: true
+  toc_float: true
+  toc_depth: 2
 ---
 
-```{r setup, include=FALSE}
 
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
 ```
 
 # Exercise 1 - Reproducing and Arranging ggplot2 Figures
 
 ```{r}
-nhanes <- read.csv("cleaned_NHANES.csv")
+nhanes <- read.csv("../data/cleaned_NHANES.csv")
 library(ggplot2)
 library(cowplot)
 library(ggpubr)
 ```
+## Individual Figures {.tabset}
+
+### Individual Plots
+
 ```{r}
 age_plot <- ggplot(data = nhanes, aes(x = age, fill = gender)) +
 geom_histogram(binwidth = 5, position = "dodge") +
@@ -25,7 +36,6 @@ geom_histogram(binwidth = 5, position = "dodge") +
        y = "Count",
        fill = "Gender")
 age_plot
-
 
 ```
 ```{r}
@@ -38,6 +48,8 @@ labs(x = "Ethnicity",
 
 ```
 
+### Combined Plots
+
 ```{r}
 plot_grid(age_plot, ethnicity_plot)
 ```
@@ -49,6 +61,11 @@ ggarrange(age_plot, ethnicity_plot)
 Both plot_grid() and ggarrange() produced very similar results when the two figures were placed side by side. I did not notice a major difference between the two layouts using the default settings. Both functions displayed the figures clearly, although the long ethnicity labels made the second figure a little crowded. For these figures, I do not think one layout looks noticeably better than the other.
 
 # Exercise 2 - Visualizing Key Characteristics
+
+```{r}
+library(DT)
+datatable(nhanes)
+```
 
 
 ```{r}
@@ -136,7 +153,7 @@ nhanes$ethnicity_1 <- NULL
 # Exercise 3 - Improving a ggplot Figure
 
 ```{r}
-diet <- read.csv("diet.csv")
+diet <- read.csv("../data/diet.csv")
 names(diet)
 head(diet)
 range(diet$Week)
