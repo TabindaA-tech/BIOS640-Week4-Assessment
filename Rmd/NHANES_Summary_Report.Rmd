@@ -1,0 +1,143 @@
+---
+title: "NHANES Summary Report"
+author: "Tabinda Ahmad"
+date: "`r Sys.Date()`"
+output: pdf_document
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+nhanes <- read.csv("../data/cleaned_NHANES.csv")
+```
+
+# Introduction
+
+This report summarizes selected characteristics of the cleaned National Health and Nutrition Examination Survey (NHANES) dataset across the 2015, 2016, and 2017 waves [@nhanes]. The report describes the sample size, gender and ethnicity distributions, and systolic blood pressure measurements for each wave
+
+# Sample Size and Gender Distribution
+
+```{r sample-gender-table}
+sample_gender <- nhanes %>%
+ group_by(wave_id) %>%
+  summarise(
+    Sample_Size = n(),
+    Male_N = sum(gender == "Male", na.rm = TRUE),
+    Male_Percent = round((Male_N / Sample_Size) * 100, 1)
+  )
+
+sample_gender %>%
+  kable(
+    caption = "Sample Size and Male Distribution by Wave",
+    col.names = c("Wave", "Sample Size", "Number of Males", "Male (%)"),
+    booktabs = TRUE
+  ) %>%
+  kable_styling(latex_options = "striped", full_width = FALSE) %>%
+  column_spec(1, bold = TRUE)
+
+
+
+```
+
+
+The sample size decreased across the three waves, from 10,175 participants in 2015 to 9,254 participants in 2017. The proportion of males remained relatively stable across the study period, ranging from 49.1% to 49.2%.
+
+
+# Ethnicity Distribution
+
+```{r ethnicity-summary}
+ethnicity_summary <- nhanes %>%
+  filter(!is.na(ethnicity_2)) %>%
+  group_by(wave_id, ethnicity_2) %>%
+  summarise(N = n(), .groups = "drop") %>%
+  group_by(wave_id) %>%
+  mutate(
+    Percent = round((N / sum(N)) * 100, 1)
+  ) %>%
+  ungroup()
+
+ethnicity_summary <- ethnicity_summary %>%
+  mutate(
+    `N (%)` = paste0(N, " (", Percent, "%)")
+  ) %>%
+  select(wave_id, ethnicity_2, `N (%)`)
+
+
+ethnicity_summary %>%
+  kable(
+    caption = "Ethnicity Distribution by Wave",
+    col.names = c("Wave", "Ethnicity", "N (%)"),
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "repeat_header"),
+    full_width = FALSE
+  ) %>%
+  column_spec(1, bold = TRUE)
+
+
+```
+
+White participants represented the largest ethnicity category in each wave, accounting for 36.1% of participants in 2015, 30.7% in 2016, and 34.0% in 2017. The distribution of the other ethnicity categories also varied across the three waves
+
+
+
+# Systolic Blood Pressure
+
+```{r average-sbp}
+nhanes$average_sbp <- rowMeans(
+  nhanes[, c("systolic_bp_1",
+             "systolic_bp_2",
+             "systolic_bp_3",
+             "systolic_bp_4")],
+  na.rm = TRUE
+)
+
+nhanes$average_sbp[is.nan(nhanes$average_sbp)] <- NA
+
+bp_summary <- nhanes %>%
+  group_by(wave_id) %>%
+  summarise(
+    Minimum = min(average_sbp, na.rm = TRUE),
+    Maximum = max(average_sbp, na.rm = TRUE),
+    Median = median(average_sbp, na.rm = TRUE),
+    Mean = mean(average_sbp, na.rm = TRUE),
+    SD = sd(average_sbp, na.rm = TRUE)
+  )
+
+bp_summary <- bp_summary %>%
+  mutate(
+    Minimum = round(Minimum, 1),
+    Maximum = round(Maximum, 1),
+    Median = round(Median, 1),
+    Mean = round(Mean, 1),
+    SD = round(SD, 1)
+  )
+
+bp_summary %>%
+  kable(
+    caption = "Summary Statistics of Average Systolic Blood Pressure by Wave",
+    col.names = c("Wave", "Minimum", "Maximum", "Median", "Mean", "Standard Deviation"),
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    latex_options = "striped",
+    full_width = FALSE
+  ) %>%
+  column_spec(1, bold = TRUE)
+
+
+```
+
+The mean average systolic blood pressure increased across the three waves, from 118.0 mm Hg in 2015 to 120.0 mm Hg in 2016 and 122.0 mm Hg in 2017. The median showed a similar increase, from 115 mm Hg in 2015 to 118 mm Hg in 2017. The standard deviation ranged from 18.1 to 20.3 mm Hg across the three waves
+
+
+# References
+
+
+
+
+
